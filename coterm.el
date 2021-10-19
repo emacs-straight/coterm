@@ -4,7 +4,7 @@
 
 ;; Filename: coterm.el
 ;; Author: jakanakaevangeli <jakanakaevangeli@chiru.no>
-;; Version: 1.1
+;; Version: 1.2
 ;; Keywords: processes
 ;; Package-Requires: ((emacs "26.1"))
 ;; URL: https://repo.or.cz/emacs-coterm.git
@@ -568,12 +568,13 @@ is the process mark."
   ;; Removed: \032 (\C-z)
   ;; Added: OSC sequence \e] ... ; ... \e\\ (or \a)
   ;; Added: sequences \e= and \e>
+  ;; Added: Invalid sequence \e\e, used by package `bash-completion'
   (concat
    ;; A control character,
    "\\(?:[\n\000\007\t\b\016\017]\\|\r\n?\\|"
    ;; a C1 escape coded character (see [ECMA-48] section 5.3 "Elements
    ;; of the C1 set"),
-   "\e\\(?:[DM78c=>]\\|"
+   "\e\\(?:[DM78c=>\e]\\|"
    ;; Emacs specific control sequence from term.el.  In coterm, we simply
    ;; ignore them.
    "AnSiT[^\n]+\n\\|"
