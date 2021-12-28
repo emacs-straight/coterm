@@ -1025,9 +1025,10 @@ buffer and the scrolling region must cover the whole screen."
                                    ansi-color-context)))
                    (?8 (ins) ;; Restore cursor (terminfo: rc)
                        (when-let ((cursor coterm--t-saved-cursor))
-                         (setq coterm--t-row (max (car cursor) (1- coterm--t-height)))
+                         (setq coterm--t-saved-cursor nil)
+                         (setq coterm--t-row (min (car cursor) (1- coterm--t-height)))
                          (setq cursor (cdr cursor))
-                         (setq coterm--t-col (max (car cursor) (1- coterm--t-width)))
+                         (setq coterm--t-col (min (car cursor) (1- coterm--t-width)))
                          (setq cursor (cdr cursor))
                          (setq ansi-color-context-region (car cursor))
                          (setq ansi-color-context (cadr cursor))
@@ -1055,7 +1056,7 @@ buffer and the scrolling region must cover the whole screen."
                                                 (split-string ctl-params ";")))
                        (ins)
                        (pcase char
-                         (?H ;; cursor motion (terminfo: cup,home)
+                         ((or ?H ?f) ;; cursor motion (terminfo: cup,home)
                           (setq coterm--t-row
                                 (1- (max 1 (min (car-or-1) coterm--t-height))))
                           (setq coterm--t-col
