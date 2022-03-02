@@ -892,6 +892,23 @@ insertion of empty lines."
       (cl-decf coterm--t-row)
       (cl-decf coterm--t-row-off)))))
 
+(defun coterm--t-clear-screen ()
+  "Clear terminal screen.
+If not using alternative sub-buffer, simply move home marker to
+point-max"
+  (setq coterm--t-row-off (coterm--t-row))
+  (setq coterm--t-col-off (coterm--t-col))
+  (if coterm--t-alternative-sub-buffer
+      (delete-region coterm--t-home (point-max))
+    (setq coterm--t-home-off 0)
+    (goto-char (point-max))
+    (unless (bolp)
+      (cl-incf coterm--t-row-off)
+      (setq coterm--t-home-off 1)
+      (setq coterm--t-col-off
+            (- coterm--t-col-off (move-to-column coterm--t-col-off))))
+    (set-marker coterm--t-home (point))))
+
 (defun coterm--t-insert (proc-filt process str newlines)
   "Insert STR at point using PROC-FILT and PROCESS.
 Synchronise PROCESS's mark beforehand and insert at its position.
@@ -983,11 +1000,11 @@ terminal screen."
             (setq string (concat fragment string))
             (setq coterm--t-unhandled-fragment nil))
 
+          (setq restore-point (if (= (point) pmark) pmark (point-marker)))
+          (setq old-pmark (copy-marker pmark window-point-insertion-type))
+
           (save-restriction
             (coterm--narrow-to-process-output pmark)
-
-            (setq restore-point (if (= (point) pmark) pmark (point-marker)))
-            (setq old-pmark (copy-marker pmark window-point-insertion-type))
             (goto-char pmark)
             ;; (setq coterm--t-row nil)
             (setq coterm--t-col nil)
@@ -1168,45 +1185,41 @@ terminal screen."
                       ;; \E[J - clear to end of screen (terminfo: ed, clear)
                       ((and ?J (guard (eq 0 (car (ctl-params*)))))
                        (ins)
-                       (delete-region (point) (point-max)))
+                       (when (zerop coterm--t-row-off)
+                         (if (= (point) coterm--t-home)
+                             (coterm--t-clear-screen)
+                           (delete-region (point) (point-max)))))
                       ((and ?J (guard (eq 1 (car (ctl-params*)))))
                        (ins)
-                       (let ((opoint (point))
-                             (orow (coterm--t-row))
-                             (ocol (coterm--t-col)))
-                         (goto-char coterm--t-home)
-                         (forward-line coterm--t-home-off)
-                         (delete-region (point) opoint)
-                         (unless (eobp)
-                           (coterm--t-apply-proc-filt
-                            proc-filt process
-                            (concat (make-string orow ?\n)
-                                    (unless (eolp)
-                                      (make-string ocol ?\s)))))
-                         (coterm--t-goto orow ocol)))
-                      (?J
-                       (ins)
-                       ;; Clear screen.  If not using alternative sub-buffer,
-                       ;; simply move home marker to point-max
-                       (setq coterm--t-row-off (coterm--t-row))
-                       (setq coterm--t-col-off (coterm--t-col))
-                       (if coterm--t-alternative-sub-buffer
-                           (delete-region coterm--t-home (point-max))
-                         (setq coterm--t-home-off 0)
-                         (goto-char (point-max))
-                         (unless (bolp)
-                           (cl-incf coterm--t-row-off)
-                           (setq coterm--t-home-off 1)
-                           (setq coterm--t-col-off
-                                 (- coterm--t-col-off (move-to-column coterm--t-col-off))))
-                         (set-marker coterm--t-home (point))))
+                       (if (zerop coterm--t-row-off)
+                           (let ((opoint (point))
+                                 (orow (coterm--t-row))
+                                 (ocol (coterm--t-col)))
+                             (goto-char coterm--t-home)
+                             (forward-line coterm--t-home-off)
+                             (delete-region (point) opoint)
+                             (unless (eobp)
+                               (coterm--t-apply-proc-filt
+                                proc-filt process
+                                (concat (make-string orow ?\n)
+                                        (unless (eolp)
+                                          (make-string ocol ?\s)))))
+                             (coterm--t-goto orow ocol))
+                         (coterm--t-clear-screen)))
+                      (?J (ins) (coterm--t-clear-screen))
                       ;; \E[K - clear to end of line (terminfo: el, el1)
                       ((and ?K (guard (eq 1 (car (ctl-params*)))))
                        (ins)
-                       (let ((ocol (coterm--t-col)))
-                         (delete-region (point) (progn (forward-line 0) (point)))
-                         (unless (eolp)
-                           (coterm--t-insert proc-filt process (make-string ocol ?\s) 0))))
+                       (and
+                        (not (bolp))
+                        (zerop coterm--t-row-off)
+                        (let ((ocol (coterm--t-col)))
+                          (delete-region (point) (progn (forward-line 0) (point)))
+                          (if (eolp)
+                              (setq coterm--t-col-off ocol)
+                            (coterm--t-apply-proc-filt
+                             proc-filt process (make-string ocol ?\s))
+                            (setq coterm--t-col-off 0)))))
                       ((and ?K (guard (eobp)))
                        (pass-through))
                       (?K
@@ -1303,8 +1316,7 @@ terminal screen."
             (set-marker pmark (point))
             (skip-chars-forward " \n")
             (when (eobp)
-              (delete-region pmark (point)))
-            (widen))
+              (delete-region pmark (point))))
 
           ;; Restore point (this restores it only for the selected window)
           (goto-char restore-point)
