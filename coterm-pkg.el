@@ -1,2 +1,2 @@
-;; Generated package description from coterm.el  -*- no-byte-compile: t -*-
-(define-package "coterm" "1.6.0.20221015.160420" "Terminal emulation for comint" '((emacs "26.1") (compat "28.1.2.0")) :commit "ce3206fbd7156685e2d2f3fbc39b3eea3334754b" :authors '(("jakanakaevangeli" . "jakanakaevangeli@chiru.no")) :maintainer '("jakanakaevangeli" . "jakanakaevangeli@chiru.no") :keywords '("processes") :url "https://repo.or.cz/emacs-coterm.git")
+;; Generated package description from coterm.el  -*- no-byte-compile: t; lexical-binding:t -*-
+(define-package "coterm" "1.6.0.20261005.5" "Terminal emulation for comint" '((emacs "26.1") (compat "28.1.2.0")) :commit "9ccac1303312c3e0d6e660400a7439fa65ea96cd" :authors '(("Miha Rihtaršič" . "miha@kamnitnik.top")) :maintainer '("Miha Rihtaršič" . "miha@kamnitnik.top") :keywords '("processes") :url "https://repo.or.cz/emacs-coterm.git")
